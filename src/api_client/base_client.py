@@ -20,6 +20,7 @@ class BaseClient:
         self.api_key = api_key
         self.session = requests.Session()
 
+    #TODO: implement generator, retries, backoff, jitter
     def _request(
         self,
         method: str,
@@ -59,25 +60,25 @@ class BaseClient:
         else:
             raise errors.APIBaseError(f"Unexpected status code: {status}")
 
-def get_all_articles(client: BaseClient, params: Dict[str, Any]):
-    page = 1
-    results = None
-    while True:
-        params['page'] = page
-        try:
-            response = client._request("GET", "/search", params)
-        except Exception as e:
-            raise e
-        data = response.json()
-        if results is None:
-            results = data.get('response', {}).get('results', [])
-        else:
-            results.extend(data.get('response', {}).get('results', []))
-        if data.get('response', {}).get('currentPage', 0) >= data.get('response', {}).get('pages', 0):
-            print(f"Fetched total {len(results)} articles.")
-            break
-        page += 1
-    return results
+    def get_all_articles(self, params: Dict[str, Any]):
+        page = 1
+        results = None
+        while True:
+            params['page'] = page
+            try:
+                response = self._request("GET", "/search", params)
+            except Exception as e:
+                raise e
+            data = response.json()
+            if results is None:
+                results = data.get('response', {}).get('results', [])
+            else:
+                results.extend(data.get('response', {}).get('results', []))
+            if data.get('response', {}).get('currentPage', 0) >= data.get('response', {}).get('pages', 0):
+                print(f"Fetched total {len(results)} articles.")
+                break
+            page += 1
+        return results
         
 
 
@@ -101,7 +102,7 @@ def main():
     }
     # request with exception handling for both response and requests
     try:
-        response = get_all_articles(client, params=params)
+        response = client.get_all_articles(params=params)
         print(len(response))
     except errors.APITimeoutError as e:
         print(f"Timeout error: {e}")

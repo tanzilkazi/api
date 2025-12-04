@@ -4,6 +4,32 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [        
+
+
+        {
+            "name": "gemini",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.llm_client.gemini_client",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Orchestrator",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.orchestrator.pipeline",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "LLMClient",
+            "type": "python",
+            "request": "launch",
+            "module": "src.llm_client.openai_client",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
         {
             "name": "BaseClient",
             "type": "python",
@@ -11,7 +37,8 @@
             "module": "src.api_client.base_client",
             "console": "integratedTerminal",
             "justMyCode": true
-        },{
+        },
+        {
             "name": "Python Debugger: Current File",
             "type": "debugpy",
             "request": "launch",
