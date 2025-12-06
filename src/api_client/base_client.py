@@ -1,3 +1,10 @@
+"""API client wrapper for Guardian requests.
+
+Provides a small `BaseClient` that performs HTTP requests to the
+Guardian API and a convenience `get_all_articles` method that pages
+through results. Keep secrets out of logs (do not log `api-key`).
+"""
+
 import logging
 import time
 from datetime import timedelta, datetime
@@ -14,6 +21,10 @@ import json
 
 class BaseClient:
     def __init__(self, base_url: str, api_key: str, timeout: int = 20) -> None:
+        """
+        - function: BaseClient.__init__
+        - logic: Store configuration values and prepare a `requests.Session`.
+        """
         self.base_url = config.BASE_URL
         self.timeout = config.DEFAULT_TIMEOUT
         self.logger = logging.getLogger(__name__)
@@ -27,14 +38,21 @@ class BaseClient:
         endpoint: str,
         params: Optional[Dict[str, Any]] = None,
     ) -> requests.Response:
-        
+        """
+        - function: BaseClient._request
+        - inputs: method: str, endpoint: str, params: Optional[Dict[str, Any]]
+        - outputs: requests.Response on success, raises API* errors on failure
+        - logic: Build URL, attach `api-key` to params, perform an HTTP request
+                 with `self.session`, and map common HTTP status codes to
+                 domain-specific exceptions. Logs at DEBUG level (avoid logging
+                 secrets in production).
+        """
         url = f"{self.base_url}{endpoint}"
         #session = requests.Session()
         
         if params is None:
             params = {}        
         params["api-key"] = self.api_key
-
         
         self.logger.debug(f"Making {method} request to {url} with params {params}")
 
@@ -60,7 +78,15 @@ class BaseClient:
         else:
             raise errors.APIBaseError(f"Unexpected status code: {status}")
 
-    def get_all_articles(self, params: Dict[str, Any]):
+    def get_all_articles(self, params: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        - function: BaseClient.get_all_articles
+        - inputs: params: Dict[str, Any] (query parameters for the API)
+        - outputs: List of raw result dicts from the Guardian API
+        - logic: Paginate through search results by setting `page` in `params`,
+                 calling `_request` for each page and aggregating `response.results`.
+                 Returns the combined list when all pages are fetched.
+        """
         page = 1
         results = None
         while True:
@@ -83,6 +109,14 @@ class BaseClient:
 
 
 def main():
+    """
+    - function: main
+    - inputs: none (reads env vars)
+    - outputs: prints counts, returns None
+    - logic: Quick manual runner for `BaseClient` that fetches yesterday's
+             articles and prints the number of results. Intended for local
+             smoke testing.
+    """
     load_dotenv()
     # TODO: change to get_env utility function
     api_key = os.getenv("GUARDIAN_API_KEY")

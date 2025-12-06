@@ -1,3 +1,10 @@
+"""Abstract LLM client interface.
+
+Defines the `LLMClient` abstract base class and a small convenience
+method `analyze_many` for batch analysis. Implementations should
+provide `analyze_article` which returns an `ArticleAnalysis`.
+"""
+
 from abc import ABC, abstractmethod
 from typing import List
 from src.core.models import Article, ArticleAnalysis
@@ -5,9 +12,21 @@ from src.core.models import Article, ArticleAnalysis
 class LLMClient(ABC):
     @abstractmethod
     def analyze_article(self, article: Article) -> ArticleAnalysis:
+        """
+        - function: analyze_article
+        - logic: Perform an LLM-based analysis for a single `Article` and map
+                 the response to the `ArticleAnalysis` dataclass. Concrete
+                 subclasses implement the call to a specific LLM provider.
+        """
         pass
 
     def analyze_many(self, articles: List[Article]) -> List[ArticleAnalysis]:
+        """
+        - function: analyze_many
+        - logic: Convenience wrapper that sequentially calls `analyze_article`
+                 for each item and returns the resulting list. Useful for
+                 simple batching in tests or small datasets.
+        """
         return [self.analyze_article(a) for a in articles]
 
 if __name__ == "__main__":

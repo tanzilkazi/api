@@ -17,9 +17,9 @@ class GeminiLLMClient(LLMClient):
         self.model = "gemini-2.5-flash"
         
     def analyze_article(self, article: Article) -> ArticleAnalysis:
+        
         prompt = self._build_prompt(article)
         raw = self._call_llm(prompt)  # currently stubbed
-        #TODO: parse response
         return self._parse_response(article.id, raw)
 
     def _build_prompt(self, article: Article) -> str:
@@ -49,26 +49,12 @@ class GeminiLLMClient(LLMClient):
             model=self.model,
             contents=prompt,
             config=genai.types.GenerateContentConfig(
-                max_output_tokens=1000,
                 temperature=0.0,
                 top_p=1.0,
                 response_mime_type="application/json"
             )
-            
         )
         content = json.loads(response.text)
-        # response = self.client.chat.completions.create(
-        #     model=self.model,
-        #     response_format={"type": "json_object"},
-        #     messages=[
-        #         {
-        #             "role": "system",
-        #             "content": "You are a news analysis engine that ONLY outputs JSON.",
-        #         },
-        #         {"role": "user", "content": prompt},
-        #     ],
-        # )
-        # content = response.choices[0].message.content
         return content
 
     def _parse_response(self, article_id: str, data: dict) -> ArticleAnalysis:
@@ -81,6 +67,7 @@ class GeminiLLMClient(LLMClient):
         entities_raw = data.get("key_entities") or []
         entities = []
         for e in entities_raw:
+             
             try:
                 entities.append(
                     Entity(
@@ -120,4 +107,3 @@ if __name__ == "__main__":
 
     client = GeminiLLMClient()
     analysis = client.analyze_article(dummy_article)
-    print(analysis)

@@ -1,4 +1,10 @@
-# src/orchestrator/pipeline.py
+"""Orchestrator: fetch, analyze, and persist Guardian article analyses.
+
+This module wires together the API client, LLM client and simple
+persistence to produce per-day JSONL analysis files in `outputs/`.
+Keep this file small: it should orchestrate steps but not implement
+low-level API or LLM details.
+"""
 
 from __future__ import annotations
 
@@ -9,7 +15,7 @@ from pathlib import Path
 from typing import List
 
 from src.core.models import Article, ArticleAnalysis,article_from_guardian
-from src.llm_client.openai_client import OpenAILLMClient
+from src.llm_client.gemini_client import GeminiLLMClient
 from src.api_client.base_client import BaseClient
 import src.api_client.config as api_config  # whatever you already use there
 from src.config import get_env  # your generic get_env helper
@@ -17,11 +23,10 @@ from src.config import get_env  # your generic get_env helper
 
 def fetch_articles_for_date(client: BaseClient, target_date: date) -> List[Article]:
     """
-    Uses your existing BaseClient to fetch Guardian results for a single date,
-    and converts them into Article objects.
-
-    IMPORTANT: adjust the call to whatever method you currently have that returns
-    the raw Guardian 'results' list.
+    - function: fetch_articles_for_date
+    - logic: Build Guardian API query params for `target_date`, call the API
+             client to retrieve raw results, and convert each raw item to an
+             `Article` via `article_from_guardian`.
     """
 
     date_str = target_date.strftime("%Y-%m-%d")
@@ -44,7 +49,13 @@ def fetch_articles_for_date(client: BaseClient, target_date: date) -> List[Artic
 
 
 def analyze_articles(articles: List[Article]) -> List[ArticleAnalysis]:
-    llm = OpenAILLMClient()
+    """
+    - function: analyze_articles
+    - logic: Instantiate a concrete LLM client (`GeminiLLMClient`) and
+             sequentially analyze each article, returning a list of
+             `ArticleAnalysis` results.
+    """
+    llm = GeminiLLMClient()
     results: List[ArticleAnalysis] = []
 
     for a in articles:
@@ -60,6 +71,11 @@ def save_analysis(
     target_date: date,
     out_dir: str = "outputs",
 ) -> Path:
+    """
+    - function: save_analysis
+    - logic: Ensure the output directory exists and write each analysis as a
+             JSON line into `guardian_analysis_{date}.jsonl`.
+    """
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     path = Path(out_dir) / f"guardian_analysis_{target_date.isoformat()}.jsonl"
 
@@ -73,6 +89,13 @@ def save_analysis(
 def run_pipeline_for_date(target_date: date) -> Path:
     """
     High-level step: fetch → analyse → save.
+    """
+    """
+    - function: run_pipeline_for_date
+    - logic: Read API configuration from environment, construct a `BaseClient`,
+             fetch articles for the date, analyze a (sample) slice, save the
+             results and return the output path. Primarily a convenience
+             wrapper for running the end-to-end flow.
     """
     api_key = get_env("GUARDIAN_API_KEY", required=True)
     base_url = api_config.BASE_URL  # whatever you used inside BaseClient
