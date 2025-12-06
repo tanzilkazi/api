@@ -20,7 +20,7 @@ class GeminiLLMClient(LLMClient):
         prompt = self._build_prompt(article)
         raw = self._call_llm(prompt)  # currently stubbed
         #TODO: parse response
-        return raw#self._parse_response(article.id, raw)
+        return self._parse_response(article.id, raw)
 
     def _build_prompt(self, article: Article) -> str:
         # This is where you define what you *ask* the LLM.
@@ -51,10 +51,12 @@ class GeminiLLMClient(LLMClient):
             config=genai.types.GenerateContentConfig(
                 max_output_tokens=1000,
                 temperature=0.0,
-                top_p=1.0
+                top_p=1.0,
+                response_mime_type="application/json"
             )
+            
         )
-        content = response.text
+        content = json.loads(response.text)
         # response = self.client.chat.completions.create(
         #     model=self.model,
         #     response_format={"type": "json_object"},
