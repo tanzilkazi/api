@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import Optional
+from typing import Any
 
 from dotenv import load_dotenv
 import requests
@@ -10,7 +10,7 @@ import requests
 load_dotenv()
 
 
-def get_env(name: str, default: Optional[str] = None, required: bool = False) -> Optional[str]:
+def get_env(name: str, default: str | None = None, required: bool = False) -> str | None:
     value = os.getenv(name, default)
     if required and not value:
         raise RuntimeError(f"Missing required environment variable: {name}")

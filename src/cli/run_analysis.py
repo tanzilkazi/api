@@ -9,7 +9,7 @@ from datetime import datetime, date, timedelta
 from src.orchestrator.pipeline import run_pipeline_for_date
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     """
     - function: parse_args
     - logic: Define a minimal CLI that accepts an optional `--date` in
@@ -23,7 +23,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     """
     - function: main
     - logic: Parse CLI args to determine a target date (defaults to

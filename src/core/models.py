@@ -1,13 +1,13 @@
 from dataclasses import dataclass
-from typing import List, Optional, Any, Dict
+from typing import List, Any, Dict
 
 @dataclass
 class Article:
     id: str
     title: str
     body: str
-    section: Optional[str]
-    publication: Optional[str]
+    section: str | None
+    publication: str | None
     url: str
     raw: Dict[str, Any]
     

@@ -1,7 +1,6 @@
 # src/llm_client/gemini_client.py
 
 import json
-from dataclasses import asdict
 from google import genai
 from src.core.models import Article, ArticleAnalysis, Entity
 from src.llm_client.base import LLMClient

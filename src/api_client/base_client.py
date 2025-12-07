@@ -9,13 +9,11 @@ import logging
 import time
 from datetime import timedelta, datetime
 import random
-from typing import Dict, Any, Generator, Optional, List
-import logging
-import requests
-import src.api_client.config as config
+from typing import Dict, Any, List
 import os
 from dotenv import load_dotenv
 import requests
+import src.api_client.config as config
 import src.api_client.errors as errors
 import json
 
@@ -45,17 +43,15 @@ class BaseClient:
         time.sleep(sleep_time)
         return sleep_time
         
-    #TODO: implement generator, retries, backoff, jitter
+    #TODO: implement generator
     def _request(
         self,
         method: str,
         endpoint: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: Dict[str, Any] | None = None,
     ) -> requests.Response:
         """
         - function: BaseClient._request
-        - inputs: method: str, endpoint: str, params: Optional[Dict[str, Any]]
-        - outputs: requests.Response on success, raises API* errors on failure
         - logic: Build URL, attach `api-key` to params, perform an HTTP request
                  with `self.session`, and map common HTTP status codes to
                  domain-specific exceptions. Logs at DEBUG level (avoid logging
@@ -175,7 +171,7 @@ class BaseClient:
         
 
 
-def main():
+def main() -> None:
     """
     - function: main
     - inputs: none (reads env vars)
