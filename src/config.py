@@ -33,3 +33,14 @@ def make_session(user_agent: str = "api-integration-lab/1.0") -> requests.Sessio
         }
     )
     return session
+
+
+# Project-wide defaults (centralized config)
+DEFAULT_PAGE_SIZE: int = 10
+DEFAULT_OUTPUT_DIR: str = "outputs"
+# Number of articles to analyze by default (sample size)
+DEFAULT_ANALYZE_LIMIT: int = 2
+# Retry/backoff defaults used by HTTP/LLM code when not overridden
+DEFAULT_MAX_RETRIES: int = 3
+DEFAULT_BASE_BACKOFF: float = 1.0
+DEFAULT_MAX_BACKOFF: float = 30.0

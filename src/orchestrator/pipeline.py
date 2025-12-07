@@ -21,7 +21,7 @@ from src.llm_client.gemini_client import GeminiLLMClient
 from src.llm_client.base import LLMClient
 from src.api_client.base_client import BaseClient
 import src.api_client.config as api_config  # whatever you already use there
-from src.config import get_env  # your generic get_env helper
+from src.config import get_env, DEFAULT_PAGE_SIZE, DEFAULT_OUTPUT_DIR, DEFAULT_ANALYZE_LIMIT
 
 
 def fetch_articles_for_date(client: BaseClient, target_date: date) -> List[Article]:
@@ -39,7 +39,7 @@ def fetch_articles_for_date(client: BaseClient, target_date: date) -> List[Artic
         "to-date": date_str,
         "show-fields": "bodyText,headline,publication",
         "order-by": "newest",
-        "page-size": 10,
+        "page-size": DEFAULT_PAGE_SIZE,
         "page": 1,
     }
 
@@ -107,7 +107,7 @@ def analyze_articles(
 def save_analysis(
     analyses: List[ArticleAnalysis],
     target_date: date,
-    out_dir: str = "outputs",
+    out_dir: str = DEFAULT_OUTPUT_DIR,
     failures: List[dict] | None = None,
 ) -> Path:
     """
@@ -133,7 +133,7 @@ def save_analysis(
     return main_path
 
 
-def run_pipeline_for_date(target_date: date, llm_client: LLMClient | None = None) -> Path:
+def run_pipeline_for_date(target_date: date, llm_client: LLMClient | None = None, analyze_limit: int | None = None) -> Path:
     """
     High-level step: fetch → analyse → save.
     """
@@ -150,7 +150,9 @@ def run_pipeline_for_date(target_date: date, llm_client: LLMClient | None = None
     client = BaseClient(base_url=base_url, api_key=api_key)
 
     articles = fetch_articles_for_date(client, target_date)
-    successes, failures = analyze_articles(articles[0:2], llm_client=llm_client)
+    effective_limit = DEFAULT_ANALYZE_LIMIT if analyze_limit is None else analyze_limit
+    limit = max(1, min(len(articles), effective_limit))
+    successes, failures = analyze_articles(articles[:limit], llm_client=llm_client)
     out_path = save_analysis(successes, target_date, failures=failures)
 
     print(f"Fetched {len(articles)} articles")

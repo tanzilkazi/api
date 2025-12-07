@@ -7,6 +7,7 @@ import argparse
 from datetime import datetime, date, timedelta
 
 from src.orchestrator.pipeline import run_pipeline_for_date
+from src.config import DEFAULT_ANALYZE_LIMIT
 
 
 def parse_args() -> argparse.Namespace:
@@ -19,6 +20,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--date",
         help="Date in YYYY-MM-DD format (defaults to yesterday)",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=DEFAULT_ANALYZE_LIMIT,
+        help=f"Number of articles to analyze (default: {DEFAULT_ANALYZE_LIMIT})",
     )
     return parser.parse_args()
 
@@ -36,8 +43,7 @@ def main() -> None:
     else:
         target_date = date.today() - timedelta(days=1)
 
-    run_pipeline_for_date(target_date)
-
+    run_pipeline_for_date(target_date, analyze_limit=args.limit)
 
 if __name__ == "__main__":
     main()

@@ -49,13 +49,15 @@ Output files are written to `outputs/guardian_analysis_YYYY-MM-DD.jsonl`.
 ## Important environment & config
 
 - `GUARDIAN_API_KEY` (required): API key used by the `BaseClient`.
-- `src/api_client/config.py` and `src/config.py` contain defaults (base URL, timeouts).
+- `src/config.py` centralises runtime defaults (page-size, output dir, analyze limit, retry/backoff constants).
+- `src/api_client/config.py` holds API-specific constants (base URL, default timeout).
 - Use `--verbose` in CLI/debug runs to enable DEBUG logging (code reads logging flags).
 
 ## Debugging tips
 
 - If VS Code tries to run `.vscode/launch.json` as a script, check your launch configuration and set `program` to the target Python file (or use `${file}`).
-- Avoid logging secrets: the client currently mounts `api-key` into `params` — do not enable persistent debug logging in shared environments.
-- If you hit rate limits (429), add retries with backoff; `BaseClient` has a TODO to implement retries.
+- Secrets are redacted in logs: `BaseClient` now redacts common secret keys (e.g. `api-key`) before logging.
+- The HTTP client implements retries with exponential backoff, jitter and honors `Retry-After` when present. If you see 429/5xx repeatedly increase `DEFAULT_MAX_RETRIES` or contact the API provider.
+- Failures from LLM calls are persisted to a separate failures file so you can resume or re-run problematic items (see `outputs/*_failures.jsonl`).
 
 ---
