@@ -20,7 +20,7 @@ import src.api_client.errors as errors
 import json
 
 class BaseClient:
-    def __init__(self, base_url: str, api_key: str, timeout: int = 0.1) -> None:
+    def __init__(self, base_url: str, api_key: str, timeout: int = 10) -> None:
         """
         - function: BaseClient.__init__
         - logic: Store configuration values and prepare a `requests.Session`.
