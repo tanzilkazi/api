@@ -1,26 +1,32 @@
 # src/llm_client/gemini_client.py
 
 import json
+import logging
 from google import genai
 from src.core.models import Article, ArticleAnalysis, Entity
 from src.llm_client.base import LLMClient
 from src.config import get_env
+from src.logging_utils import trace
+
+logger = logging.getLogger(__name__)
 
 class GeminiLLMClient(LLMClient):
     """
     For now: returns a deterministic stub result.
     Later: plug in real OpenAI call in _call_llm().
     """
+    @trace
     def __init__(self) -> None:
         self.client = genai.Client(api_key=get_env("GEMINI_API_KEY", required=True))
         self.model = "gemini-2.5-flash"
         
+    @trace
     def analyze_article(self, article: Article) -> ArticleAnalysis:
-        
         prompt = self._build_prompt(article)
         raw = self._call_llm(prompt)  # currently stubbed
         return self._parse_response(article.id, raw)
 
+    @trace
     def _build_prompt(self, article: Article) -> str:
         # This is where you define what you *ask* the LLM.
         # Even though we're stubbing now, keep it realistic.
@@ -43,6 +49,7 @@ class GeminiLLMClient(LLMClient):
         }}
         """
 
+    @trace
     def _call_llm(self, prompt: str) -> dict:
         response = self.client.models.generate_content(
             model=self.model,
@@ -56,6 +63,7 @@ class GeminiLLMClient(LLMClient):
         content = json.loads(response.text)
         return content
 
+    @trace
     def _parse_response(self, article_id: str, data: dict) -> ArticleAnalysis:
         # Defensive parsing with defaults so a slightly wrong response won't crash everything.
         sentiment = float(data.get("sentiment", 0.0))

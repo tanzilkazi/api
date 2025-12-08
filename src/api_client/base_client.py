@@ -15,10 +15,14 @@ from dotenv import load_dotenv
 import requests
 import src.api_client.config as config
 import src.api_client.errors as errors
-import json
+from src.api_client.config import DEFAULT_TIMEOUT
+from src.logging_utils import trace
+
+logger = logging.getLogger(__name__)
 
 class BaseClient:
-    def __init__(self, base_url: str, api_key: str, timeout: int = 10) -> None:
+    @trace
+    def __init__(self, base_url: str, api_key: str, timeout: int = DEFAULT_TIMEOUT) -> None:
         """
         - function: BaseClient.__init__
         - logic: Store configuration values and prepare a `requests.Session`.
@@ -29,6 +33,7 @@ class BaseClient:
         self.api_key = api_key
         self.session = requests.Session()
 
+    @trace
     def _backoff_sleep_jitter(self, attempt: int, max_backoff:float, base_backoff:float, retry_after:float | None = None) -> float:
         """
         - function: BaseClient._backoff_sleep_jitter
@@ -44,6 +49,7 @@ class BaseClient:
         return sleep_time
         
     #TODO: implement generator
+    @trace
     def _request(
         self,
         method: str,
@@ -141,6 +147,7 @@ class BaseClient:
                 time.sleep(sleep_time)
                 continue
 
+    @trace
     def get_all_articles(self, params: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
         - function: BaseClient.get_all_articles
@@ -164,13 +171,13 @@ class BaseClient:
             else:
                 results.extend(data.get('response', {}).get('results', []))
             if data.get('response', {}).get('currentPage', 0) >= data.get('response', {}).get('pages', 0):
-                print(f"Fetched total {len(results)} articles.")
                 break
             page += 1
         return results
         
 
 
+@trace
 def main() -> None:
     """
     - function: main
@@ -201,15 +208,15 @@ def main() -> None:
     try:
         response = client.get_all_articles(params=params)
     except errors.APITimeoutError as e:
-        print(f"Timeout error: {e}")
+        logger.error("timeout.error=%s", e)
     except errors.APIAuthError as e:
-        print(f"Auth error: {e}")
+        logger.error("auth.error=%s", e)
     except errors.APIClientError as e:
-        print(f"Client error: {e}")
+        logger.error("client.error=%s", e)
     except errors.APIServerError as e:
-        print(f"Server error: {e}")
+        logger.error("server.error=%s", e)
     except errors.APIBaseError as e:
-        print(f"Unexpected error: {e}")
+        logger.error("unexpected.error=%s", e)
     
     
     

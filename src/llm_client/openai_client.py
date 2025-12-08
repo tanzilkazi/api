@@ -1,26 +1,33 @@
 # src/llm_client/openai_client.py
 
 import json
+import logging
 from dataclasses import asdict
 from openai import OpenAI
 from src.core.models import Article, ArticleAnalysis, Entity
 from src.llm_client.base import LLMClient
 from src.config import get_env
+from src.logging_utils import trace
+
+logger = logging.getLogger(__name__)
 
 class OpenAILLMClient(LLMClient):
     """
     For now: returns a deterministic stub result.
     Later: plug in real OpenAI call in _call_llm().
     """
+    @trace
     def __init__(self) -> None:
         self.client = OpenAI(api_key=get_env("OPENAI_API_KEY", required=True))
         self.model = get_env("OPENAI_MODEL", "gpt-4o-mini")
         
+    @trace
     def analyze_article(self, article: Article) -> ArticleAnalysis:
         prompt = self._build_prompt(article)
         raw = self._call_llm(prompt)  # currently stubbed
         return self._parse_response(article.id, raw)
 
+    @trace
     def _build_prompt(self, article: Article) -> str:
         # This is where you define what you *ask* the LLM.
         # Even though we're stubbing now, keep it realistic.
@@ -43,6 +50,7 @@ class OpenAILLMClient(LLMClient):
         }}
         """
 
+    @trace
     def _call_llm(self, prompt: str) -> dict:
         response = self.client.chat.completions.create(
             model=self.model,
@@ -58,6 +66,7 @@ class OpenAILLMClient(LLMClient):
         content = response.choices[0].message.content
         return json.loads(content)
 
+    @trace
     def _parse_response(self, article_id: str, data: dict) -> ArticleAnalysis:
         # Defensive parsing with defaults so a slightly wrong response won't crash everything.
         sentiment = float(data.get("sentiment", 0.0))
@@ -107,4 +116,4 @@ if __name__ == "__main__":
 
     client = OpenAILLMClient()
     analysis = client.analyze_article(dummy_article)
-    print(json.dumps(asdict(analysis), indent=2))
+    logger.info(json.dumps(asdict(analysis), indent=2))

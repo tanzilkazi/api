@@ -11,19 +11,24 @@ from __future__ import annotations
 import json
 import time
 import random
+import logging
 from dataclasses import asdict
 from datetime import date, timedelta
 from pathlib import Path
 from typing import List, Tuple
 
-from src.core.models import Article, ArticleAnalysis,article_from_guardian
+from src.core.models import Article, ArticleAnalysis, article_from_guardian
 from src.llm_client.gemini_client import GeminiLLMClient
 from src.llm_client.base import LLMClient
 from src.api_client.base_client import BaseClient
 import src.api_client.config as api_config  # whatever you already use there
 from src.config import get_env, DEFAULT_PAGE_SIZE, DEFAULT_OUTPUT_DIR, DEFAULT_ANALYZE_LIMIT
+from src.logging_utils import trace
+
+logger = logging.getLogger(__name__)
 
 
+@trace
 def fetch_articles_for_date(client: BaseClient, target_date: date) -> List[Article]:
     """
     - function: fetch_articles_for_date
@@ -51,6 +56,7 @@ def fetch_articles_for_date(client: BaseClient, target_date: date) -> List[Artic
     return articles
 
 
+@trace
 def analyze_articles(
     articles: List[Article],
     llm_client: LLMClient | None = None,
@@ -97,13 +103,19 @@ def analyze_articles(
                     sleep_time = min(max_backoff, base_backoff * (2 ** (attempt - 1)))
                     sleep_time += random.uniform(0, sleep_time * 0.5)
                     # log and sleep before retrying
-                    # use print for now; pipeline should use logger in future
-                    print(f"LLM call failed for {getattr(a,'id',None)} on attempt {attempt}: {e}; sleeping {sleep_time:.2f}s")
+                    logger.warning(
+                        "LLM call failed for %s on attempt %d: %s; sleeping %.2fs",
+                        getattr(a, "id", None),
+                        attempt,
+                        e,
+                        sleep_time,
+                    )
                     time.sleep(sleep_time)
 
     return successes, failures
 
 
+@trace
 def save_analysis(
     analyses: List[ArticleAnalysis],
     target_date: date,
@@ -130,9 +142,13 @@ def save_analysis(
             for item in failures:
                 ff.write(json.dumps(item) + "\n")
 
+    logger.info("saved.count=%d path=%s", len(analyses), main_path)
+    if failures:
+        logger.info("failures.count=%d path=%s", len(failures), f"{out_dir}/guardian_analysis_{target_date.isoformat()}_failures.jsonl")
     return main_path
 
 
+@trace
 def run_pipeline_for_date(target_date: date, llm_client: LLMClient | None = None, analyze_limit: int | None = None) -> Path:
     """
     High-level step: fetch → analyse → save.
@@ -155,10 +171,10 @@ def run_pipeline_for_date(target_date: date, llm_client: LLMClient | None = None
     successes, failures = analyze_articles(articles[:limit], llm_client=llm_client)
     out_path = save_analysis(successes, target_date, failures=failures)
 
-    print(f"Fetched {len(articles)} articles")
-    print(f"Wrote {len(successes)} analyses to {out_path}")
+    logger.info("fetched.count=%d", len(articles))
+    logger.info("wrote.count=%d path=%s", len(successes), out_path)
     if failures:
-        print(f"Recorded {len(failures)} failures to outputs/ (see *_failures.jsonl)")
+        logger.info("recorded.failures.count=%d", len(failures))
     return out_path
 
 

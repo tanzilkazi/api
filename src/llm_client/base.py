@@ -8,8 +8,13 @@ provide `analyze_article` which returns an `ArticleAnalysis`.
 from abc import ABC, abstractmethod
 from typing import List
 from src.core.models import Article, ArticleAnalysis
+import logging
+from src.logging_utils import trace
+
+logger = logging.getLogger(__name__)
 
 class LLMClient(ABC):
+    @trace
     @abstractmethod
     def analyze_article(self, article: Article) -> ArticleAnalysis:
         """
@@ -20,6 +25,7 @@ class LLMClient(ABC):
         """
         pass
 
+    @trace
     def analyze_many(self, articles: List[Article]) -> List[ArticleAnalysis]:
         """
         - function: analyze_many
@@ -58,4 +64,4 @@ if __name__ == "__main__":
 
     client = DummyLLM()
     res = client.analyze_article(dummy_article)
-    print(asdict(res))
+    logger.info("analysis=%s", asdict(res))

@@ -1,5 +1,10 @@
 from dataclasses import dataclass
 from typing import List, Any, Dict
+import logging
+from src.logging_utils import trace
+
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class Article:
@@ -10,12 +15,14 @@ class Article:
     publication: str | None
     url: str
     raw: Dict[str, Any]
-    
+
+
 @dataclass
 class Entity:
     text: str
     type: str
     salience: float
+
 
 @dataclass
 class ArticleAnalysis:
@@ -26,7 +33,9 @@ class ArticleAnalysis:
     topics: List[str]
     confidence: float
     raw_llm_response: Dict[str, Any]
-    
+
+
+@trace
 def article_from_guardian(item: dict) -> Article:
     fields = item.get("fields", {})
     return Article(

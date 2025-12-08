@@ -8,8 +8,12 @@ from dotenv import load_dotenv
 import requests
 
 load_dotenv()
+from src.logging_utils import trace
+
+logger = logging.getLogger(__name__)
 
 
+@trace
 def get_env(name: str, default: str | None = None, required: bool = False) -> str | None:
     value = os.getenv(name, default)
     if required and not value:
@@ -17,13 +21,46 @@ def get_env(name: str, default: str | None = None, required: bool = False) -> st
     return value
 
 
-def setup_logging(level: int = logging.INFO) -> None:
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
+@trace
+def setup_logging(level: int = logging.WARNING) -> None:
+    # Accept either numeric level or textual level name (e.g. "DEBUG", "INFO")
+    lvl = parse_level(level)
+
+    # Clear existing handlers and configure a single StreamHandler with kv pairs
+    root = logging.getLogger()
+    for h in list(root.handlers):
+        root.removeHandler(h)
+
+    handler = logging.StreamHandler()
+    fmt = "ts=%(asctime)s level=%(levelname)s name=%(name)s msg=%(message)s"
+    handler.setFormatter(logging.Formatter(fmt))
+    root.addHandler(handler)
+    root.setLevel(lvl)
+
+    # # Ensure network-related loggers remain at DEBUG level so connection details are visible.
+    # for net_logger in ("src.api_client", "requests", "urllib3", "http.client", "urllib3.connectionpool"):
+    #     logging.getLogger(net_logger).setLevel(logging.DEBUG)
 
 
+@trace
+def parse_level(lv: Any) -> int:
+    """Normalize a level name or number to a logging level integer.
+
+    "TRACE" (if provided) will be treated as INFO to preserve compatibility
+    while avoiding a custom logging level.
+    """
+    if isinstance(lv, int):
+        return lv
+    name = str(lv).upper()
+    if name == "TRACE":
+        return logging.INFO
+    try:
+        return int(name)
+    except Exception:
+        return getattr(logging, name, logging.WARNING)
+
+
+@trace
 def make_session(user_agent: str = "api-integration-lab/1.0") -> requests.Session:
     session = requests.Session()
     session.headers.update(
