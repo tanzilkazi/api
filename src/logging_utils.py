@@ -14,6 +14,16 @@ from typing import Any
 
 _REDACT_KEYS = ("key", "token", "secret", "password", "api")
 
+# Global flag to control whether tracing (function entry/exit) is enabled.
+# Default is False; set via `set_tracing(True)` or via `setup_logging(..., trace=True)`.
+TRACE_ENABLED = False
+
+
+def set_tracing(enabled: bool) -> None:
+    """Enable or disable the trace decorator globally."""
+    global TRACE_ENABLED
+    TRACE_ENABLED = bool(enabled)
+
 
 def _should_redact(k: str) -> bool:
     lo = k.lower()
@@ -63,17 +73,22 @@ def trace(fn):
     @functools.wraps(fn)
     def _wrapped(*args, **kwargs):
         logger = logging.getLogger(fn.__module__)
-        # Trace is emitted at DEBUG level per user request.
-        if not logger.isEnabledFor(logging.DEBUG):
+        # Tracing is controlled by a global flag. When enabled, trace logs are
+        # emitted at INFO level (per user preference) so they are visible when
+        # the application is configured for INFO or lower.
+        if not TRACE_ENABLED:
             return fn(*args, **kwargs)
 
-        logger.debug("enter=%s args=%s kwargs=%s", fn.__qualname__, safe_repr(args, 200), safe_repr(kwargs, 200))
+        if not logger.isEnabledFor(logging.INFO):
+            return fn(*args, **kwargs)
+
+        logger.info("enter=%s args=%s kwargs=%s", fn.__qualname__, safe_repr(args, 200), safe_repr(kwargs, 200))
         t0 = time.perf_counter()
         try:
             result = fn(*args, **kwargs)
             return result
         finally:
             dt = time.perf_counter() - t0
-            logger.debug("exit=%s duration=%.6fs", fn.__qualname__, dt)
+            logger.info("exit=%s duration=%.6fs", fn.__qualname__, dt)
 
     return _wrapped

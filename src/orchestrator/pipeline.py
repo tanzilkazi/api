@@ -26,6 +26,21 @@ from src.config import get_env, DEFAULT_PAGE_SIZE, DEFAULT_OUTPUT_DIR, DEFAULT_A
 from src.logging_utils import trace
 
 logger = logging.getLogger(__name__)
+status_logger = logging.getLogger("status")
+
+
+def enable_status_logging() -> None:
+    """Configure the status logger with its own handler to always print."""
+    if status_logger.handlers:
+        return  # Already configured
+    
+    handler = logging.StreamHandler()
+    fmt = "ts=%(asctime)s level=STATUS name=status msg=%(message)s"
+    handler.setFormatter(logging.Formatter(fmt))
+    handler.setLevel(logging.DEBUG)  # Always emit, regardless of root level
+    status_logger.addHandler(handler)
+    status_logger.setLevel(logging.DEBUG)
+    status_logger.propagate = False  # Don't propagate to root logger
 
 
 @trace
@@ -53,6 +68,7 @@ def fetch_articles_for_date(client: BaseClient, target_date: date) -> List[Artic
     raw_results = client.get_all_articles(params)  # <-- adjust to your real method
 
     articles: List[Article] = [article_from_guardian(item) for item in raw_results]
+    status_logger.info("fetch.complete fetched=%d", len(articles))
     return articles
 
 
@@ -84,6 +100,7 @@ def analyze_articles(
                 analysis = llm_client.analyze_article(a)
                 successes.append(analysis)
                 last_exc = None
+                status_logger.info("analyze.progress analyzed=%d/%d", len(successes), len(articles))
                 break
             except Exception as e:
                 last_exc = e
@@ -112,6 +129,7 @@ def analyze_articles(
                     )
                     time.sleep(sleep_time)
 
+    status_logger.info("analyze.complete analyzed=%d errors=%d", len(successes), len(failures))
     return successes, failures
 
 
@@ -145,11 +163,13 @@ def save_analysis(
     logger.info("saved.count=%d path=%s", len(analyses), main_path)
     if failures:
         logger.info("failures.count=%d path=%s", len(failures), f"{out_dir}/guardian_analysis_{target_date.isoformat()}_failures.jsonl")
+    
+    status_logger.info("save.complete saved=%d failures=%d path=%s", len(analyses), len(failures) if failures else 0, main_path)
     return main_path
 
 
 @trace
-def run_pipeline_for_date(target_date: date, llm_client: LLMClient | None = None, analyze_limit: int | None = None) -> Path:
+def run_pipeline_for_date(target_date: date, llm_client: LLMClient | None = None, analyze_limit: int | None = None, status: bool = False) -> Path:
     """
     High-level step: fetch → analyse → save.
     """
@@ -160,6 +180,9 @@ def run_pipeline_for_date(target_date: date, llm_client: LLMClient | None = None
              results and return the output path. Primarily a convenience
              wrapper for running the end-to-end flow.
     """
+    if status:
+        enable_status_logging()
+    
     api_key = get_env("GUARDIAN_API_KEY", required=True)
     base_url = api_config.BASE_URL  # whatever you used inside BaseClient
 

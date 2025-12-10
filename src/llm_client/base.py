@@ -64,4 +64,4 @@ if __name__ == "__main__":
 
     client = DummyLLM()
     res = client.analyze_article(dummy_article)
-    logger.info("analysis=%s", asdict(res))
+    logger.debug("analysis=%s", asdict(res))

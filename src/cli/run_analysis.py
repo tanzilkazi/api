@@ -8,7 +8,7 @@ import logging
 from datetime import datetime, date, timedelta
 
 from src.orchestrator.pipeline import run_pipeline_for_date
-from src.config import DEFAULT_ANALYZE_LIMIT, setup_logging
+from src.config import DEFAULT_ANALYZE_LIMIT, setup_logging, parse_level
 from src.logging_utils import trace
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--trace",
         action="store_true",
-        help="Enable function entry/exit tracing (emitted at INFO level)",
+        help="Enable function entry/exit tracing (emitted at INFO level when enabled)",
+    )
+    parser.add_argument(
+        "--status",
+        action="store_true",
+        help="Enable human-readable status updates during pipeline execution",
     )
     return parser.parse_args()
 
@@ -56,16 +61,25 @@ def main() -> None:
     args = parse_args()
 
     # Configure logging early so modules can emit logs.
-    # If --trace is requested we map it to INFO-level tracing.
-    requested_level = "INFO" if getattr(args, "trace", False) else getattr(args, "log_level", "WARNING")
-    setup_logging(requested_level)
+    requested_level = getattr(args, "log_level", "WARNING")
+    # If tracing requested, ensure the root level is at least INFO so
+    # trace decorator messages (at INFO) can be emitted.
+    if getattr(args, "trace", False):
+        try:
+            lvl_val = parse_level(requested_level)
+        except Exception:
+            lvl_val = logging.WARNING
+        if lvl_val > logging.INFO:
+            requested_level = "INFO"
+
+    setup_logging(requested_level, trace=getattr(args, "trace", False))
 
     if args.date:
         target_date: date = datetime.strptime(args.date, "%Y-%m-%d").date()
     else:
         target_date = date.today() - timedelta(days=1)
 
-    run_pipeline_for_date(target_date, analyze_limit=args.limit)
+    run_pipeline_for_date(target_date, analyze_limit=args.limit, status=getattr(args, "status", False))
 
 if __name__ == "__main__":
     main()

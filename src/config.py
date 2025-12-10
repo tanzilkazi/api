@@ -3,15 +3,22 @@
 import logging
 import os
 from typing import Any
-
 from dotenv import load_dotenv
 import requests
-
-load_dotenv()
 from src.logging_utils import trace
 
-logger = logging.getLogger(__name__)
+# Project-wide defaults (centralized config)
+DEFAULT_PAGE_SIZE: int = 10
+DEFAULT_OUTPUT_DIR: str = "outputs"
+# Number of articles to analyze by default (sample size)
+DEFAULT_ANALYZE_LIMIT: int = 2
+# Retry/backoff defaults used by HTTP/LLM code when not overridden
+DEFAULT_MAX_RETRIES: int = 3
+DEFAULT_BASE_BACKOFF: float = 1.0
+DEFAULT_MAX_BACKOFF: float = 30.0
 
+load_dotenv()
+logger = logging.getLogger(__name__)
 
 @trace
 def get_env(name: str, default: str | None = None, required: bool = False) -> str | None:
@@ -22,7 +29,7 @@ def get_env(name: str, default: str | None = None, required: bool = False) -> st
 
 
 @trace
-def setup_logging(level: int = logging.WARNING) -> None:
+def setup_logging(level: int = logging.WARNING, trace: bool = False) -> None:
     # Accept either numeric level or textual level name (e.g. "DEBUG", "INFO")
     lvl = parse_level(level)
 
@@ -37,9 +44,17 @@ def setup_logging(level: int = logging.WARNING) -> None:
     root.addHandler(handler)
     root.setLevel(lvl)
 
-    # # Ensure network-related loggers remain at DEBUG level so connection details are visible.
-    # for net_logger in ("src.api_client", "requests", "urllib3", "http.client", "urllib3.connectionpool"):
-    #     logging.getLogger(net_logger).setLevel(logging.DEBUG)
+    # Enable/disable trace decorator behavior (separate flag so users can
+    # enable tracing without necessarily making network logs noisy).
+    try:
+        # Import locally to avoid circular import at module import time.
+        from src.logging_utils import set_tracing
+
+        set_tracing(bool(trace))
+    except Exception:
+        # If tracing cannot be toggled for any reason, fail silently
+        # and leave the decorator's default value unchanged.
+        pass
 
 
 @trace
@@ -72,12 +87,4 @@ def make_session(user_agent: str = "api-integration-lab/1.0") -> requests.Sessio
     return session
 
 
-# Project-wide defaults (centralized config)
-DEFAULT_PAGE_SIZE: int = 10
-DEFAULT_OUTPUT_DIR: str = "outputs"
-# Number of articles to analyze by default (sample size)
-DEFAULT_ANALYZE_LIMIT: int = 2
-# Retry/backoff defaults used by HTTP/LLM code when not overridden
-DEFAULT_MAX_RETRIES: int = 3
-DEFAULT_BASE_BACKOFF: float = 1.0
-DEFAULT_MAX_BACKOFF: float = 30.0
+

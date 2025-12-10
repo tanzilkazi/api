@@ -116,4 +116,4 @@ if __name__ == "__main__":
 
     client = OpenAILLMClient()
     analysis = client.analyze_article(dummy_article)
-    logger.info(json.dumps(asdict(analysis), indent=2))
+    logger.debug(json.dumps(asdict(analysis), indent=2))
